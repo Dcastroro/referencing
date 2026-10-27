@@ -687,6 +687,37 @@ class TestResource:
         resolver = Registry().resolver()
         assert resource.pointer("", resolver=resolver).contents == contents
 
+    @pytest.mark.parametrize(
+        "contents",
+        [None, True, False, 0, 1.5, "abc", ""],
+    )
+    @pytest.mark.parametrize("segment", ["0", "foo"])
+    @pytest.mark.parametrize("nested", [False, True])
+    def test_pointer_cannot_traverse_scalar(self, contents, segment, nested):
+        resource = Resource.opaque({"value": contents} if nested else contents)
+        pointer = f"/value/{segment}" if nested else f"/{segment}"
+        resolver = Registry().resolver_with_root(resource)
+        with pytest.raises(exceptions.PointerToNowhere) as exc:
+            resolver.lookup(f"#{pointer}")
+        assert exc.value == exceptions.PointerToNowhere(
+            ref=pointer,
+            resource=resource,
+        )
+
+    @pytest.mark.parametrize(
+        "contents",
+        [None, True, False, 0, 1.5, "abc", ""],
+    )
+    def test_pointer_can_select_scalar(self, contents):
+        root = Resource.opaque(contents)
+        assert (
+            Registry().resolver_with_root(root).lookup("#").contents
+            == contents
+        )
+        parent = Resource.opaque({"value": contents})
+        resolver = Registry().resolver_with_root(parent)
+        assert resolver.lookup("#/value").contents == contents
+
     def test_opaque(self):
         contents = {"foo": "bar"}
         assert Resource.opaque(contents) == Resource(

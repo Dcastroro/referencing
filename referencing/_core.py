@@ -263,6 +263,8 @@ class Resource(Generic[D]):
         contents = self.contents
         segments: list[int | str] = []
         for segment in unquote(pointer[1:]).split("/"):
+            if contents is None or isinstance(contents, (str, int, float)):
+                raise exceptions.PointerToNowhere(ref=pointer, resource=self)
             if isinstance(contents, Sequence):
                 segment = int(segment)
             else:
